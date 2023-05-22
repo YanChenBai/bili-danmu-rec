@@ -9,7 +9,7 @@ export class DanmuController {
   @Get('list')
   async getDanmu(@Query() data: Danmu) {
     return Success(
-      await this.danmuService.getDanmu(data.id, data.page),
+      await this.danmuService.getDanmu(data.id, data.page ? data.page : 1),
       '查询成功',
     );
   }
