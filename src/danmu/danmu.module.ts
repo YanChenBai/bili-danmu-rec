@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { DanmuController } from './danmu.controller';
 
-@Module({})
+@Module({
+  controllers: [DanmuController]
+})
 export class DanmuModule {}

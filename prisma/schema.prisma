@@ -6,19 +6,115 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
+// 普通弹幕
 model Danmu {
+  id           Int      @id @default(autoincrement())
+  roomId       String
+  msg          String
+  uid          String
+  uname        String
+  badge        Json?    @db.Json
+  identityInfo Json?    @db.Json
+  messageId    String
+  receiveTime  DateTime
+  createTime   DateTime @default(now())
+}
+
+// 醒目留言
+model SC {
+  id           Int      @id @default(autoincrement())
+  roomId       String
+  msg          String
+  uid          String
+  uname        String
+  badge        Json?    @db.Json
+  identityInfo Json?    @db.Json
+  color        String
+  price        Float
+  time         Int
+  messageId    String
+  receiveTime  DateTime
+  createTime   DateTime @default(now())
+}
+
+// 礼物
+model Gift {
+  id           Int      @id @default(autoincrement())
+  roomId       String
+  uid          String
+  uname        String
+  badge        Json?    @db.Json
+  identityInfo Json?    @db.Json
+  giftName     String
+  giftId       Int
+  price        Float
+  amount       Int
+  messageId    String
+  receiveTime  DateTime
+  createTime   DateTime @default(now())
+}
+
+// 大航海开通记录
+model GuardBuy {
+  id          Int      @id @default(autoincrement())
+  roomId      String
+  uid         String
+  uname       String
+  giftId      Int
+  giftName    String
+  guardLevel  Int
+  price       Float
+  startTime   DateTime
+  endTime     DateTime
+  messageId   String
+  receiveTime DateTime
+  createTime  DateTime @default(now())
+}
+
+// 开播下播记录
+model LiveTime {
   id         Int      @id @default(autoincrement())
   roomId     String
-  msg        String
-  uid        String
-  uname      String
-  badge      String?
-  identity   String?
-  raw        String
+  state      Boolean  @default(true)
+  title      String
+  cover      String
+  createTime DateTime @default(now())
+}
+
+// 热度记录
+model Hot {
+  id         Int      @id @default(autoincrement())
+  roomId     String
+  hot        Int
   messageId  String
-  updateTime DateTime @default(now())
+  createTime DateTime @default(now())
+}
+
+// 弹幕数量统计
+model DanmuCount {
+  id         Int      @id @default(autoincrement())
+  roomId     String
+  count      Int
+  createTime DateTime @default(now())
+}
+
+// 原始消息
+model Raw {
+  id         Int      @id @default(autoincrement())
+  messageId  String
+  content    String   @db.Text
+  createTime DateTime @default(now())
+}
+
+model RoomInfo {
+  id         Int      @id @default(autoincrement())
+  roomId     String
+  longId     String?
+  name       String
+  face       String   @db.LongText
+  createTime DateTime @default(now())
 }
