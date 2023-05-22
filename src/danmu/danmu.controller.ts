@@ -8,6 +8,9 @@ export class DanmuController {
   constructor(private readonly danmuService: DanmuService) {}
   @Get('list')
   async getDanmu(@Query() data: Danmu) {
-    return Success(await this.danmuService.getDanmu(data.id, data.page));
+    return Success(
+      await this.danmuService.getDanmu(data.id, data.page),
+      '查询成功',
+    );
   }
 }

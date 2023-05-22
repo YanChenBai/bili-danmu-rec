@@ -33,10 +33,10 @@ export class DanmuService {
     };
   }
 
-  getDef(msg: Message<any>) {
+  getDef(msg: Message<any>, roomId: number) {
     return {
       messageId: msg.id,
-      roomId: this.roomId.toString(),
+      roomId: roomId.toString(),
       receiveTime: new Date(msg.timestamp),
     };
   }
@@ -45,32 +45,39 @@ export class DanmuService {
     const res = await this.getRoomInfo(id);
     if (res === false) return;
     await this.addRoomInfo(id, res.uid, res.room_id);
-    this.roomId = res.room_id;
     const handler: MsgHandler = {
-      onIncomeDanmu: (msg) => this.addDanmu(msg),
-      onIncomeSuperChat: (msg) => this.addSC(msg),
-      onGift: (msg) => this.addGift(msg),
-      onGuardBuy: (msg) => this.addGuardBuy(msg),
-      onAttentionChange: (msg) => this.addHot(msg),
-      onLiveStart: () => this.addTimeLine(true),
-      onLiveEnd: () => this.addTimeLine(false),
+      onIncomeDanmu: (msg) => this.addDanmu(msg, res.room_id),
+      onIncomeSuperChat: (msg) => this.addSC(msg, res.room_id),
+      onGift: (msg) => this.addGift(msg, res.room_id),
+      onGuardBuy: (msg) => this.addGuardBuy(msg, res.room_id),
+      onAttentionChange: (msg) => this.addHot(msg, res.room_id),
+      onLiveStart: () => this.addTimeLine(true, res.room_id),
+      onLiveEnd: () => this.addTimeLine(false, res.room_id),
+      onError: (e) => {
+        this.logger.error(e);
+      },
+      onOpen: () => {
+        this.logger.log(
+          '开始监听房间#' + res.room_id + '@shory_id#' + res.short_id,
+        );
+        this.logger.log('标题: ' + res.title);
+      },
+      onClose: () => {
+        this.logger.log('连接关闭 #' + res.room_id);
+      },
     };
-    this.logger.log(
-      '开始监听房间#' + res.room_id + '@shory_id#' + res.short_id,
-    );
-    this.logger.log('标题: ' + res.title);
     startListen(id, handler);
   }
 
   // 添加普通弹幕
-  async addDanmu(msg: Message<DanmuMsg>) {
+  async addDanmu(msg: Message<DanmuMsg>, roomId: number) {
     const data = {
       msg: msg.body.content,
-      ...this.getDef(msg),
+      ...this.getDef(msg, roomId),
       ...this.getUser(msg.body.user),
     };
     this.logger.log(
-      `[普通弹幕][room#${this.roomId}][${msg.id}]: ${msg.body.user.uid} # ${msg.body.user.uname}:${msg.body.content}`,
+      `[普通弹幕][room#${roomId}][${msg.id}]: ${msg.body.user.uid} # ${msg.body.user.uname}:${msg.body.content}`,
     );
     try {
       await this.prismaService.danmu.create({ data });
@@ -81,17 +88,17 @@ export class DanmuService {
   }
 
   // 添加SC
-  async addSC(msg: Message<SuperChatMsg>) {
+  async addSC(msg: Message<SuperChatMsg>, roomId: number) {
     const data = {
       msg: msg.body.content,
-      ...this.getDef(msg),
+      ...this.getDef(msg, roomId),
       color: msg.body.content_color,
       price: msg.body.price,
       time: msg.body.time,
       ...this.getUser(msg.body.user),
     };
     this.logger.log(
-      `[醒目留言][room#${this.roomId}][${msg.id}]: ${msg.body.user.uid} # ${msg.body.user.uname}:${msg.body.content}`,
+      `[醒目留言][room#${roomId}][${msg.id}]: ${msg.body.user.uid} # ${msg.body.user.uname}:${msg.body.content}`,
     );
     try {
       await this.prismaService.sC.create({ data });
@@ -102,13 +109,13 @@ export class DanmuService {
   }
 
   // 添加礼物
-  async addGift(msg: Message<GiftMsg>) {
+  async addGift(msg: Message<GiftMsg>, roomId: number) {
     const data = {
       giftName: msg.body.gift_name,
       giftId: msg.body.gift_id,
       price: msg.body.price,
       amount: msg.body.amount,
-      ...this.getDef(msg),
+      ...this.getDef(msg, roomId),
       ...this.getUser(msg.body.user),
     };
     try {
@@ -120,7 +127,7 @@ export class DanmuService {
   }
 
   // 添加开通舰长记录
-  async addGuardBuy(msg: Message<GuardBuyMsg>) {
+  async addGuardBuy(msg: Message<GuardBuyMsg>, roomId: number) {
     const data = {
       giftName: msg.body.gift_name,
       giftId: msg.body.gift_id,
@@ -130,7 +137,7 @@ export class DanmuService {
       endTime: new Date(msg.body.end_time),
       uid: msg.body.user.uid.toString(),
       uname: msg.body.user.uname,
-      ...this.getDef(msg),
+      ...this.getDef(msg, roomId),
     };
     try {
       await this.prismaService.guardBuy.create({ data });
@@ -152,14 +159,14 @@ export class DanmuService {
   }
 
   // 记录开播下播
-  async addTimeLine(state: boolean) {
-    const res: RoomInfo | boolean = await this.getRoomInfo(this.roomId);
+  async addTimeLine(state: boolean, roomId: number) {
+    const res: RoomInfo | boolean = await this.getRoomInfo(roomId);
     if (res === false) return;
     const { title, keyframe } = res;
     try {
       await this.prismaService.liveTime.create({
         data: {
-          roomId: this.roomId.toString(),
+          roomId: roomId.toString(),
           title,
           cover: keyframe,
           state,
@@ -171,12 +178,12 @@ export class DanmuService {
   }
 
   // 热度记录
-  async addHot(msg: Message<AttentionChangeMsg>) {
+  async addHot(msg: Message<AttentionChangeMsg>, roomId: number) {
     try {
       this.prismaService.hot.create({
         data: {
           hot: msg.body.attention,
-          roomId: this.roomId.toString(),
+          roomId: roomId.toString(),
           messageId: msg.id,
         },
       });
@@ -227,16 +234,27 @@ export class DanmuService {
 
   // 查询弹幕
   async getDanmu(roomId: number, page: number) {
-    const pageSzie = 50;
+    const pageSzie = 100;
     try {
-      this.logger.log(roomId.toString());
-      return await this.prismaService.danmu.findMany({
-        // skip: pageSzie * page - 1,
-        take: pageSzie,
-        where: {
-          roomId: roomId.toString(),
-        },
-      });
+      const where = {
+        roomId: roomId.toString(),
+      };
+      const res = await this.prismaService.$transaction([
+        this.prismaService.danmu.count({
+          where,
+        }),
+        this.prismaService.danmu.findMany({
+          skip: pageSzie * page - 1,
+          take: pageSzie,
+          where,
+        }),
+      ]);
+      return {
+        results: res[1],
+        pageSzie,
+        count: res[0],
+        page,
+      };
     } catch (error) {
       throw new HttpException('', HttpStatus.INTERNAL_SERVER_ERROR);
     }

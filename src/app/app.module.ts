@@ -14,6 +14,6 @@ import { DanmuController } from '../danmu/danmu.controller';
 })
 export class AppModule {
   constructor(private readonly danmuService: DanmuService) {
-    Config.rooms.forEach((id) => danmuService.listenerStart(id));
+    Config.rooms.forEach(async (id) => await danmuService.listenerStart(id));
   }
 }
