@@ -1,14 +1,7 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
-import {
-  LiveUserInfo,
-  liveUserInfo,
-  roomInfo,
-  type RoomInfo,
-} from '../api/api';
-import Axios from 'axios';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { Danmu } from './danmu.dto';
+import { QueryDanmu } from './danmu.dto';
 import {
   startListen,
   type MsgHandler,
@@ -21,10 +14,15 @@ import {
   AttentionChangeMsg,
 } from 'blive-message-listener';
 import getDate from '../utils/getDate';
+import { RoomService } from '../room/room.service';
+import { RoomInfo } from 'src/api/api';
 
 @Injectable()
 export class DanmuService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly roomService: RoomService,
+  ) {}
   private readonly logger = new Logger(DanmuService.name);
 
   getUser(user: User) {
@@ -44,32 +42,35 @@ export class DanmuService {
     };
   }
 
-  async listenerStart(id: number) {
-    const res = await this.getRoomInfo(id);
-    if (res === false) return;
-    await this.addRoomInfo(id, res.uid, res.room_id);
-    const handler: MsgHandler = {
-      onIncomeDanmu: (msg) => this.addDanmu(msg, res.room_id),
-      onIncomeSuperChat: (msg) => this.addSC(msg, res.room_id),
-      onGift: (msg) => this.addGift(msg, res.room_id),
-      onGuardBuy: (msg) => this.addGuardBuy(msg, res.room_id),
-      onAttentionChange: (msg) => this.addHot(msg, res.room_id),
-      onLiveStart: () => this.addTimeLine(true, res.room_id),
-      onLiveEnd: () => this.addTimeLine(false, res.room_id),
-      onError: (e) => {
-        this.logger.error(e);
-      },
-      onOpen: () => {
-        this.logger.log(
-          '开始监听房间#' + res.room_id + '@shory_id#' + res.short_id,
-        );
-        this.logger.log('标题: ' + res.title);
-      },
-      onClose: () => {
-        this.logger.log('连接关闭 #' + res.room_id);
-      },
-    };
-    startListen(id, handler);
+  // 开始监房间列表
+  async listenerStart() {
+    const res = await this.roomService.getRoomList();
+    for (const item of res) {
+      const roomId = Number(item.roomId);
+      const liveRoomInfo = await this.roomService.getRoomInfo(roomId);
+      if (liveRoomInfo === false) continue;
+
+      const handler: MsgHandler = {
+        onIncomeDanmu: (msg) => this.addDanmu(msg, roomId),
+        onIncomeSuperChat: (msg) => this.addSC(msg, roomId),
+        onGift: (msg) => this.addGift(msg, roomId),
+        onGuardBuy: (msg) => this.addGuardBuy(msg, roomId),
+        onAttentionChange: (msg) => this.addHot(msg, roomId),
+        onLiveStart: () => this.addTimeLine(true, roomId),
+        onLiveEnd: () => this.addTimeLine(false, roomId),
+        onError: (e) => {
+          this.logger.error(e);
+        },
+        onOpen: () => {
+          this.logger.log('开始监听房间#' + roomId);
+          this.logger.log('标题: ' + liveRoomInfo.title);
+        },
+        onClose: () => {
+          this.logger.log('连接关闭 #' + roomId);
+        },
+      };
+      startListen(roomId, handler);
+    }
   }
 
   // 添加普通弹幕
@@ -154,20 +155,9 @@ export class DanmuService {
     this.addRaw(msg.raw, msg.id);
   }
 
-  //获取直播间信息
-  async getRoomInfo(id: number): Promise<RoomInfo | false> {
-    try {
-      const info = await Axios<{ data: RoomInfo }>(roomInfo(id));
-      return info.data.data;
-    } catch (error) {
-      this.logger.error('直播间数据获取失败！', error);
-      return false;
-    }
-  }
-
   // 记录开播下播
   async addTimeLine(state: boolean, roomId: number) {
-    const res: RoomInfo | boolean = await this.getRoomInfo(roomId);
+    const res: RoomInfo | boolean = await this.roomService.getRoomInfo(roomId);
     if (res === false) return;
     const { title, keyframe } = res;
     try {
@@ -202,33 +192,6 @@ export class DanmuService {
     this.addRaw(msg.raw, msg.id);
   }
 
-  // 保存直播间名字
-  async addRoomInfo(id: number, uid: number, longId: number) {
-    const count = await this.prismaService.roomInfo.count({
-      where: {
-        roomId: id.toString(),
-      },
-    });
-    if (count <= 0) {
-      try {
-        const res = await Axios<{ data: LiveUserInfo }>(liveUserInfo(uid));
-        const name = res.data.data.info.uname;
-        const face = res.data.data.info.face;
-        await this.prismaService.roomInfo.create({
-          data: {
-            roomId: id.toString(),
-            name,
-            face,
-            longId: longId.toString(),
-            createTime: getDate(),
-          },
-        });
-      } catch (error) {
-        this.logger.error('保存主播信息失败', error);
-      }
-    }
-  }
-
   // 保存原始消息
   async addRaw(msg: any, messageId: string) {
     return;
@@ -245,23 +208,23 @@ export class DanmuService {
   }
 
   // 查询弹幕
-  async getDanmu(info: Danmu) {
-    const { id: roomId, uname, msg } = info;
-    const page = Number(info.page);
-    const pageSzie = 100;
+  async getDanmu(queryParams: QueryDanmu) {
     try {
-      const where: any = {
-        roomId: roomId.toString(),
-      };
-      if (uname) where.uname = uname;
-      if (msg) where.msg = msg;
+      const { pageSize, page, roomId, uname, msg, startTime, endTime } =
+        queryParams;
+
+      const receiveTime: { gte?: Date; lte?: Date } = {};
+      startTime ? (receiveTime.gte = getDate(startTime)) : '';
+      endTime ? (receiveTime.lte = getDate(endTime)) : '';
+      const where = { roomId, uname, msg: { contains: msg }, receiveTime };
+
       const res = await this.prismaService.$transaction([
         this.prismaService.danmu.count({
           where,
         }),
         this.prismaService.danmu.findMany({
-          skip: pageSzie * (page - 1),
-          take: pageSzie,
+          skip: pageSize * (page - 1),
+          take: pageSize,
           where,
           orderBy: {
             receiveTime: 'desc',
@@ -270,12 +233,12 @@ export class DanmuService {
       ]);
       return {
         results: res[1],
-        pageSzie,
+        pageSzie: pageSize,
         count: res[0],
-        page,
+        page: page,
       };
     } catch (error) {
-      throw new HttpException('', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException('查询失败!', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

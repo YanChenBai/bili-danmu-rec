@@ -113,7 +113,7 @@ model Raw {
 model RoomInfo {
   id         Int      @id @default(autoincrement())
   roomId     String
-  longId     String?
+  shortId    String
   name       String
   face       String   @db.LongText
   createTime DateTime @default(now())

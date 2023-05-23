@@ -1,5 +1,11 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { Danmu } from './danmu.dto';
+import {
+  Controller,
+  Get,
+  Query,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
+import { QueryDanmu } from './danmu.dto';
 import { DanmuService } from '../danmu/danmu.service';
 import { Success } from 'src/utils/response';
 
@@ -7,7 +13,8 @@ import { Success } from 'src/utils/response';
 export class DanmuController {
   constructor(private readonly danmuService: DanmuService) {}
   @Get('list')
-  async getDanmu(@Query() data: Danmu) {
-    return Success(await this.danmuService.getDanmu(data), '查询成功');
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async getDanmu(@Query() queryParmas: QueryDanmu) {
+    return Success(await this.danmuService.getDanmu(queryParmas), '查询成功');
   }
 }
