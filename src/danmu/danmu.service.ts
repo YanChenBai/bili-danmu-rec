@@ -231,6 +231,7 @@ export class DanmuService {
 
   // 保存原始消息
   async addRaw(msg: any, messageId: string) {
+    return;
     try {
       const data = {
         content: JSON.stringify(msg),
