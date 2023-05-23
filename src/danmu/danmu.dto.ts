@@ -1,8 +1,10 @@
 import { IsNotEmpty } from 'class-validator';
 
 export class Danmu {
+  public uname = '';
+  public msg = '';
   @IsNotEmpty()
-  public page = 1;
+  public page: number;
   @IsNotEmpty()
   public id: number;
 }

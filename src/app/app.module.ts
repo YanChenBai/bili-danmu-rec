@@ -6,7 +6,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import Config from 'src/config/config';
 import { InfoController } from '../info/info.controller';
 import { DanmuController } from '../danmu/danmu.controller';
-
+import moment from 'moment-timezone';
 @Module({
   imports: [PrismaModule],
   controllers: [AppController, InfoController, DanmuController],

@@ -6,7 +6,9 @@ import {
   type RoomInfo,
 } from '../api/api';
 import Axios from 'axios';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { Danmu } from './danmu.dto';
 import {
   startListen,
   type MsgHandler,
@@ -18,18 +20,19 @@ import {
   GuardBuyMsg,
   AttentionChangeMsg,
 } from 'blive-message-listener';
+import getDate from '../utils/getDate';
+
 @Injectable()
 export class DanmuService {
   constructor(private readonly prismaService: PrismaService) {}
   private readonly logger = new Logger(DanmuService.name);
-  private roomId: number;
 
   getUser(user: User) {
     return {
       uname: user.uname,
       uid: user.uid.toString(),
-      badge: JSON.stringify(user.badge ? user.badge : ''),
-      identityInfo: JSON.stringify(user.identity ? user.identity : ''),
+      badge: user.badge as Prisma.JsonObject,
+      identityInfo: user.identity as Prisma.JsonObject,
     };
   }
 
@@ -37,7 +40,7 @@ export class DanmuService {
     return {
       messageId: msg.id,
       roomId: roomId.toString(),
-      receiveTime: new Date(msg.timestamp),
+      receiveTime: getDate(msg.timestamp),
     };
   }
 
@@ -75,6 +78,7 @@ export class DanmuService {
       msg: msg.body.content,
       ...this.getDef(msg, roomId),
       ...this.getUser(msg.body.user),
+      createTime: getDate(),
     };
     this.logger.log(
       `[普通弹幕][room#${roomId}][${msg.id}]: ${msg.body.user.uid} # ${msg.body.user.uname}:${msg.body.content}`,
@@ -96,6 +100,7 @@ export class DanmuService {
       price: msg.body.price,
       time: msg.body.time,
       ...this.getUser(msg.body.user),
+      createTime: getDate(),
     };
     this.logger.log(
       `[醒目留言][room#${roomId}][${msg.id}]: ${msg.body.user.uid} # ${msg.body.user.uname}:${msg.body.content}`,
@@ -117,6 +122,7 @@ export class DanmuService {
       amount: msg.body.amount,
       ...this.getDef(msg, roomId),
       ...this.getUser(msg.body.user),
+      createTime: getDate(),
     };
     try {
       await this.prismaService.gift.create({ data });
@@ -138,6 +144,7 @@ export class DanmuService {
       uid: msg.body.user.uid.toString(),
       uname: msg.body.user.uname,
       ...this.getDef(msg, roomId),
+      createTime: getDate(),
     };
     try {
       await this.prismaService.guardBuy.create({ data });
@@ -170,6 +177,7 @@ export class DanmuService {
           title,
           cover: keyframe,
           state,
+          createTime: getDate(),
         },
       });
     } catch (error) {
@@ -185,6 +193,7 @@ export class DanmuService {
           hot: msg.body.attention,
           roomId: roomId.toString(),
           messageId: msg.id,
+          createTime: getDate(),
         },
       });
     } catch (error) {
@@ -211,6 +220,7 @@ export class DanmuService {
             name,
             face,
             longId: longId.toString(),
+            createTime: getDate(),
           },
         });
       } catch (error) {
@@ -225,6 +235,7 @@ export class DanmuService {
       const data = {
         content: JSON.stringify(msg),
         messageId,
+        createTime: getDate(),
       };
       await this.prismaService.raw.create({ data });
     } catch (error) {
@@ -233,20 +244,27 @@ export class DanmuService {
   }
 
   // 查询弹幕
-  async getDanmu(roomId: number, page: number) {
+  async getDanmu(info: Danmu) {
+    const { id: roomId, uname, msg } = info;
+    const page = Number(info.page);
     const pageSzie = 100;
     try {
-      const where = {
+      const where: any = {
         roomId: roomId.toString(),
       };
+      if (uname) where.uname = uname;
+      if (msg) where.msg = msg;
       const res = await this.prismaService.$transaction([
         this.prismaService.danmu.count({
           where,
         }),
         this.prismaService.danmu.findMany({
-          skip: pageSzie * page - 1,
+          skip: pageSzie * (page - 1),
           take: pageSzie,
           where,
+          orderBy: {
+            receiveTime: 'desc',
+          },
         }),
       ]);
       return {
