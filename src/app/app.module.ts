@@ -14,6 +14,6 @@ import moment from 'moment-timezone';
 })
 export class AppModule {
   constructor(private readonly danmuService: DanmuService) {
-    Config.rooms.forEach(async (id) => await danmuService.listenerStart(id));
+    // Config.rooms.forEach(async (id) => await danmuService.listenerStart(id));
   }
 }
