@@ -12,6 +12,11 @@ export class QueryDanmu extends Pagination {
   @IsOptional()
   @IsNotEmpty()
   @Type(() => String)
+  public uid?: string;
+
+  @IsOptional()
+  @IsNotEmpty()
+  @Type(() => String)
   public msg?: string;
 
   @IsOptional()

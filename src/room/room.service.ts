@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import Axios from 'axios';
 import { LiveUserInfo, RoomInfo, liveUserInfo, roomInfo } from 'src/api/api';
 import { PrismaService } from 'src/prisma/prisma.service';
-import getDate from 'src/utils/getDate';
+import { today } from 'src/utils/day';
 
 @Injectable()
 export class RoomService {
@@ -37,7 +37,7 @@ export class RoomService {
             name,
             face,
             shortId: res.short_id.toString(),
-            createTime: getDate(),
+            createTime: today(),
           },
         });
       } catch (error) {
@@ -66,7 +66,7 @@ export class RoomService {
     }
   }
 
-  //获取直播间信息
+  // 获取直播间信息
   async getRoomInfo(id: number): Promise<RoomInfo | false | null> {
     try {
       const info = await Axios<{

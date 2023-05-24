@@ -13,9 +13,10 @@ import {
   GuardBuyMsg,
   AttentionChangeMsg,
 } from 'blive-message-listener';
-import getDate from '../utils/getDate';
+// import getDate from '../utils/getDate';
 import { RoomService } from '../room/room.service';
 import { RoomInfo } from 'src/api/api';
+import { getString, today } from 'src/utils/day';
 
 @Injectable()
 export class DanmuService {
@@ -38,7 +39,7 @@ export class DanmuService {
     return {
       messageId: msg.id,
       roomId: roomId.toString(),
-      receiveTime: getDate(msg.timestamp),
+      receiveTime: getString(msg.timestamp),
     };
   }
 
@@ -80,7 +81,7 @@ export class DanmuService {
       msg: msg.body.content,
       ...this.getDef(msg, roomId),
       ...this.getUser(msg.body.user),
-      createTime: getDate(),
+      createTime: today(),
     };
     this.logger.log(
       `[普通弹幕][room#${roomId}][${msg.id}]: ${msg.body.user.uid} # ${msg.body.user.uname}:${msg.body.content}`,
@@ -102,7 +103,7 @@ export class DanmuService {
       price: msg.body.price,
       time: msg.body.time,
       ...this.getUser(msg.body.user),
-      createTime: getDate(),
+      createTime: today(),
     };
     this.logger.log(
       `[醒目留言][room#${roomId}][${msg.id}]: ${msg.body.user.uid} # ${msg.body.user.uname}:${msg.body.content}`,
@@ -124,7 +125,7 @@ export class DanmuService {
       amount: msg.body.amount,
       ...this.getDef(msg, roomId),
       ...this.getUser(msg.body.user),
-      createTime: getDate(),
+      createTime: today(),
     };
     try {
       await this.prismaService.gift.create({ data });
@@ -146,7 +147,7 @@ export class DanmuService {
       uid: msg.body.user.uid.toString(),
       uname: msg.body.user.uname,
       ...this.getDef(msg, roomId),
-      createTime: getDate(),
+      createTime: today(),
     };
     try {
       await this.prismaService.guardBuy.create({ data });
@@ -168,7 +169,7 @@ export class DanmuService {
           title,
           cover: keyframe,
           state,
-          createTime: getDate(),
+          createTime: today(),
         },
       });
     } catch (error) {
@@ -184,7 +185,7 @@ export class DanmuService {
           hot: msg.body.attention,
           roomId: roomId.toString(),
           messageId: msg.id,
-          createTime: getDate(),
+          createTime: today(),
         },
       });
     } catch (error) {
@@ -200,7 +201,7 @@ export class DanmuService {
       const data = {
         content: JSON.stringify(msg),
         messageId,
-        createTime: getDate(),
+        createTime: today(),
       };
       await this.prismaService.raw.create({ data });
     } catch (error) {
@@ -211,13 +212,18 @@ export class DanmuService {
   // 查询弹幕
   async getDanmu(queryParams: QueryDanmu) {
     try {
-      const { pageSize, page, roomId, uname, msg, startTime, endTime } =
+      const { pageSize, page, roomId, uname, msg, startTime, endTime, uid } =
         queryParams;
-
-      const receiveTime: { gte?: Date; lte?: Date } = {};
-      startTime ? (receiveTime.gte = getDate(startTime)) : '';
-      endTime ? (receiveTime.lte = getDate(endTime)) : '';
-      const where = { roomId, uname, msg: { contains: msg }, receiveTime };
+      const receiveTime: { gte?: string; lte?: string } = {};
+      startTime ? (receiveTime.gte = getString(startTime)) : '';
+      endTime ? (receiveTime.lte = getString(endTime)) : '';
+      const where = {
+        roomId,
+        uname: { contains: uname },
+        msg: { contains: msg },
+        uid,
+        receiveTime,
+      };
 
       const res = await this.prismaService.$transaction([
         this.prismaService.danmu.count({
