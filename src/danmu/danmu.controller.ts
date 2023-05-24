@@ -8,7 +8,9 @@ import {
 import { QueryDanmu } from './danmu.dto';
 import { DanmuService } from '../danmu/danmu.service';
 import { Success } from 'src/utils/response';
+import { NestLogger } from 'nest-logs';
 
+// @NestLogger()
 @Controller('danmu')
 export class DanmuController {
   constructor(private readonly danmuService: DanmuService) {}

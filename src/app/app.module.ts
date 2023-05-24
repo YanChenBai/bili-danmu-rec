@@ -1,20 +1,23 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { DanmuService } from '../danmu/danmu.service';
 import { PrismaModule } from '../prisma/prisma.module';
-import { InfoController } from '../info/info.controller';
-import { DanmuController } from '../danmu/danmu.controller';
-import { RoomService } from '../room/room.service';
-import { RoomController } from '../room/room.controller';
+import { NestLogsModule } from 'nest-logs';
+import { DanmuModule } from 'src/danmu/danmu.module';
+import { RoomModule } from 'src/room/room.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TasksModule } from 'src/tasks/tasks.module';
 
 @Module({
-  imports: [PrismaModule],
-  controllers: [AppController, InfoController, DanmuController, RoomController],
-  providers: [AppService, DanmuService, RoomService],
+  imports: [
+    PrismaModule,
+    NestLogsModule,
+    DanmuModule,
+    RoomModule,
+    ScheduleModule.forRoot(),
+    TasksModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
 })
-export class AppModule {
-  constructor(private readonly danmuService: DanmuService) {
-    // danmuService.listenerStart();
-  }
-}
+export class AppModule {}

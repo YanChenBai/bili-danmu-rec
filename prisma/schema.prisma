@@ -22,6 +22,7 @@ model Danmu {
   messageId    String
   receiveTime  DateTime
   createTime   DateTime @default(now())
+  roomInfo     RoomInfo @relation(fields: [roomId], references: [roomId])
 }
 
 // 醒目留言
@@ -112,9 +113,10 @@ model Raw {
 
 model RoomInfo {
   id         Int      @id @default(autoincrement())
-  roomId     String
+  roomId     String   @unique
   shortId    String
   name       String
   face       String   @db.LongText
   createTime DateTime @default(now())
+  Danmu      Danmu[]
 }

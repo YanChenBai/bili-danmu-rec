@@ -48,6 +48,7 @@ export class DanmuService {
     for (const item of res) {
       const roomId = Number(item.roomId);
       const liveRoomInfo = await this.roomService.getRoomInfo(roomId);
+      this.logger.log(liveRoomInfo);
       if (liveRoomInfo === false) continue;
 
       const handler: MsgHandler = {
