@@ -28,10 +28,11 @@ export class RoomController {
 
   @Get('get')
   async getUserList() {
-    try {
-      return Success(await this.prismaService.roomInfo.findMany(), '获取成功!');
-    } catch (error) {
-      throw new HttpException('', HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    return Success(await this.roomService.getRoomList(), '获取成功!');
+  }
+
+  @Get('todayDanmuCount')
+  async todayDanmuCount() {
+    return Success(await this.roomService.todayDanmuCount());
   }
 }

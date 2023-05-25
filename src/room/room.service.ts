@@ -12,13 +12,14 @@ export class RoomService {
   // 保存直播间名字
   async addRoomInfo(id: number) {
     const res = await this.getRoomInfo(id);
-    if (res === false)
+    if (res === false) {
       throw new HttpException(
         '房间信息获取失败!',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
-    else if (res === null)
+    } else if (res === null) {
       throw new HttpException('房间不存在!', HttpStatus.NOT_FOUND);
+    }
     const count = await this.prismaService.roomInfo.count({
       where: {
         roomId: res.room_id.toString(),
@@ -81,6 +82,18 @@ export class RoomService {
     } catch (error) {
       this.logger.error('直播间数据获取失败！', error);
       return false;
+    }
+  }
+
+  // 获取直播间今天的弹幕数量
+  async todayDanmuCount() {
+    try {
+      return await this.prismaService.danmuCount.findMany({
+        orderBy: { createTime: 'desc' },
+        distinct: ['roomId'],
+      });
+    } catch (error) {
+      throw new HttpException('获取失败!', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

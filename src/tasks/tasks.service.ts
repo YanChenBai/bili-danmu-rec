@@ -16,9 +16,19 @@ export class TasksService {
   async updateDanmu() {
     // await this.danmuService.listenerStart();
   }
-  @Timeout(1000)
+  // @Timeout(1000)
   // @Cron('* * 1 * * *')
-  async handleInterval() {
+  async statisticsDanmu() {
     await this.statisticsService.danmu();
+  }
+
+  @Timeout(100)
+  async trst() {
+    // await this.prismaService.danmu.groupBy({
+    //   by: [
+    //     { roomId: { alias: 'roomId' } },
+    //     { hour: { date: 'createTime', timeZone: 'utc', alias: 'hour' } },
+    //   ],
+    // });
   }
 }
