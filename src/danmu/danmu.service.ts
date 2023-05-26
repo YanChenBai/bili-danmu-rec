@@ -212,19 +212,35 @@ export class DanmuService {
   // 查询弹幕
   async getDanmu(queryParams: QueryDanmu) {
     try {
-      const { pageSize, page, roomId, uname, msg, startTime, endTime, uid } =
-        queryParams;
+      const {
+        pageSize,
+        page,
+        roomId,
+        uname,
+        msg,
+        startTime,
+        endTime,
+        uid,
+        badgeIsRoom,
+      } = queryParams;
       const receiveTime: { gte?: string; lte?: string } = {};
       startTime ? (receiveTime.gte = getString(startTime)) : '';
       endTime ? (receiveTime.lte = getString(endTime)) : '';
+      const badge = badgeIsRoom
+        ? {
+            path: '$.anchor.is_same_room',
+            equals: true,
+          }
+        : {};
+
       const where = {
         roomId,
         uname: { contains: uname },
         msg: { contains: msg },
         uid,
         receiveTime,
+        badge,
       };
-
       const res = await this.prismaService.$transaction([
         this.prismaService.danmu.count({
           where,

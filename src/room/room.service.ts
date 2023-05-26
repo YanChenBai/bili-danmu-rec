@@ -12,6 +12,7 @@ export class RoomService {
   // 保存直播间名字
   async addRoomInfo(id: number) {
     const res = await this.getRoomInfo(id);
+    this.logger.debug(res);
     if (res === false) {
       throw new HttpException(
         '房间信息获取失败!',

@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsOptional } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional } from 'class-validator';
 import { Pagination } from 'src/dto/pagination.dto';
 
 // 查询弹幕
@@ -32,4 +32,8 @@ export class QueryDanmu extends Pagination {
   @IsNotEmpty()
   @Type(() => String)
   public roomId: string;
+
+  @IsBoolean()
+  @Type(() => Boolean)
+  public badgeIsRoom = false;
 }
