@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { getDay, today } from 'src/utils/day';
 
@@ -31,5 +31,37 @@ export class StatisticsService {
       data: counts,
     });
     this.logger.debug(counts, danmuCountRes);
+  }
+
+  // 统计每小时弹幕数量
+  async hourDanmu(id: string) {
+    const strartTime = getDay().startOf('day').format();
+    const format = '%Y-%m-%d %H:00:00';
+    try {
+      const res = await this.prismaService.$queryRaw<
+        Array<{
+          hour: string;
+          count: number;
+        }>
+      >`
+      SELECT
+          DATE_FORMAT(
+              receiveTime,
+              ${format}
+          ) AS hour,
+          COUNT(*) AS count
+      FROM Danmu
+      WHERE
+          roomId = ${id}
+          AND receiveTime >= ${strartTime}
+      GROUP BY hour
+      `;
+      return res.map((item) => {
+        item.count = Number(item.count);
+        return item;
+      });
+    } catch (error) {
+      throw new HttpException('获取失败!', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }

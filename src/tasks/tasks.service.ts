@@ -24,16 +24,7 @@ export class TasksService {
   }
 
   @Timeout(100)
-  async trst() {
-    const strartTime = getDay().startOf('day').format();
-    const id = '6154037';
-    const res = await this.prismaService.$queryRaw<
-      Array<{
-        hour: string;
-        count: number;
-      }>
-    >`SELECT DATE_FORMAT(receiveTime, '%Y-%m-%d %H:00:00') AS hour, COUNT(*) AS count FROM Danmu WHERE roomId = ${id} AND receiveTime >= ${strartTime} GROUP BY hour`;
-
-    console.log(res);
+  async test() {
+    this.logger.debug(await this.statisticsService.hourDanmu('6154037'));
   }
 }
